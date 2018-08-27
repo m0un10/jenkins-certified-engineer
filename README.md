@@ -335,6 +335,228 @@ https://github.com/jenkinsci/jenkins/blob/jenkins-2.121.3/core/src/main/resource
   - Making basic updates to jobs and build scripts
   - Troubleshooting specific problems from build and test failure alerts
 
+  ## Building Continuous Delivery (CD) Pipelines
+
+  - Pipeline Concepts
+    - Value stream mapping for CD pipelines
+    -  Why create a pipeline?
+    - Gates within a CD pipeline
+    - How to protect centralized pipelines when multiple groups use same tools
+    - Definition of binary reuse, automated deployment, multiple environments
+    - Elements of your ideal CI/CD pipeline - tools
+    - Key concepts in building scripts (including security/password, environment information, etc.)
+  - Upstream and downstream
+    - Triggering jobs from other jobs
+    - Setting up the Parameterized Trigger plugin
+    - Upstream/downstreamjobs
+  - Triggering
+    - Triggering Jenkins on code changes
+      - Trigger builds remotely (e.g. from scripts)
+      - Build manually
+      - Build after other projects are built
+      - Build periodically - cron format
+      - GitHub hook trigger for GIT
+        - Add Githook functionality (Github - Project - Settings - Integration & Services - Jenkins hook url)
+        - Add new item in Jenkins UI - Pipeline - My Java Projects
+          - [X]Github project
+          - [X]GitHub hook trigger for GITScm polling
+          - Pipeline
+            - Definition: Pipeline script from SCM
+            - SCM: Git
+              - Repository URL
+              - Credentials
+            - Branches to build
+              - Branch Specifier (blank for 'any'): `*/development`
+            - Repoitory browser: githubweb
+              - URL: <PROJECT URL>
+            - Script path: `Jenkinsfile`
+      - Scm polling
+    - Difference between push and pull
+    - When to use push vs. pull
+  - Pipeline (formerly known as “Workflow”)
+    - Benefits of Pipeline vs linked jobs
+    - Functionalities offered by Pipeline
+      - `Jenkinsfile` lives in the SCM that defines the Jenkins pipeline
+      - needs pipeline plugin
+      - 2 styles:
+        - Declarative - defining the state as oppose to scripted
+        - Scripted - more like a bash script, Groovy programing style
+      - Example - basic layout:
+      ```
+      pipeline {
+        agent any   <- which agent are we going to use for this pipeline (any/none/label '<MATCH>'/docker '<IMAGE>')
+
+        stages {   <- stages of build
+          stage('Build') {
+            steps {
+              echo 'Buidling..'
+            }
+          }
+          stage('Test') {
+            steps {
+              echo 'Testing..'
+            }
+          }
+          stage('Deploy') {
+            steps {
+              echo 'Deploying..'
+            }
+          }
+        }
+      }
+      ```
+      - directives can be either on the top and it applies to all steps, or in each step explicitly (e.g. different docker image for test and for deploy)
+      - tons of different "steps" associated with plugins
+      - "sh" for a shell script is the most commonly used
+      - "echo" prints a string
+      - environment directive sets EVN vars and they are available from the scope where they are defined:
+      ```
+      environment {
+        ENV_VAR = "my value"
+      }
+      ```
+      - Use Groovy lint in your IDE
+    - How to use Pipeline
+    - Pipeline stage view
+  - Folders
+    - How to control access to items in Jenkins with folders
+    - Referencing jobs in folders
+  - Parameters
+    - Setting up test automation in Jenkins against an uploaded executable
+    - Passing parameters between jobs
+    - Identifying parameters and how to use them: file parameter, string parameter
+    - Jenkins CLI parameters
+      - Associate the SSH public key with the user: Manage Jenkins - Manage Users - gear - SSH Public Keys
+      - Download the Jenkins client:
+      ```
+      wget http://(jenkins_master):8080/jnlpJars/jenkins-cli.jar
+      echo "JENKINS_URL='http://localhost:8080'" >> /etc/environment
+      echo "alias jenkins-cli='java -jar jenkins-cli.jar'" >> ~/.bashrc
+      <LOGOUT><LOGIN> the bash session
+      jenkins-cli
+        Usage: java -jar jenkins-cli.jar [-s URL] command [opts...] args...
+        Options:
+          -s URL
+          -i KEY
+          -p HOST:PORT
+          -noCertificateCheck
+          -noKeyAuth    
+      jenkins-cli help
+      ```
+      - Few different commands that are useful:
+      ```
+      jenkins-cli who-am-i
+      jenkins-cli build "Freestyles/My Freestyle Project"
+      jenkins-cli version
+      jenkins-cli shutdown
+      jenkins-cli safe-shutdown
+      jenkins-cli restart
+      jenkins-cli install-plugin thinBackup -restart
+      jenkins-cli console "Freestyle/My Freestyle Project" 51
+      ```
+  - Promotions
+    - Promotion of a job
+    - Why promote jobs?
+    - How to use the Promoted Builds plugin
+  - Notifications
+    - How to radiate information on CD pipelines to teams
+  - Pipeline [Multibranch](https://jenkins.io/blog/2015/12/03/pipeline-as-code-with-multibranch-workflows-in-jenkins/) and Repository Scanning
+    - Usage of Multibranch jobs
+      - [Example for Java Project](https://github.com/linuxacademy/content-jenkins-java-project/blob/master/Jenkinsfile)
+      - You can have conditions in the Jenkinsfile:
+        ```when {
+          branch 'development'
+        }
+        ```
+      - When we have trunk branch where everyone pushes the code and then when tests are fine we want to promote to a different branch - we need to select "Multibranch pipeline"
+        - Name
+        - Display name
+        - Description
+        - Branch Sources
+          - Add source - Git   <--not GitHub, because it uses HTTPS
+            - Project repository: git@...
+            - Credentials: jenkins
+            - Repository browser: githubweb
+              - URL: https://...
+            - Additional Behaviours
+            - Advanced:
+              - Include branches
+              - Exclude branches
+              - Property strategy - All branches get the same properties
+        - Health Metrics
+          - [X]Recursive - individual projects will dictate the health
+        - Pipeline Libraries
+        - Pipeline Model Definition
+      - After you save, it is determining the available branches
+      - Disable the previous pipeline        
+      - Add a new stage "Promote Development to Master"
+      ```
+        agent {
+          label 'apache'
+        }
+        when {
+          branch 'development'
+        }
+        steps {
+          sh 'git stash'   <--stashing any local changes
+          sh 'git checkout development'
+          sh 'git pull origin'
+          sh 'git checkout master'
+          sh 'git merge development'
+          sh 'git push origin master'
+        }
+        ```
+      - Change "when branch development" to "master"
+      - ENV var called ${env.BRANCH_NAME} is only available in multibranch pipeline project
+      - Use this ENV var to create subdirectories where artifacts will be stored (../rectangles/all/development etc.)
+      - Use "Scan Multibranch Pipeline" on the left pane
+      - Fully automated merge will be triggered after the development build is finished
+    - Scanning GitHub and Bitbucket Organization
+    - Scanning basic SCM repositories
+  - Pipeline Global Libraries
+    - How to share code across Pipelines
+      - library that has methods accessible amongst different projects
+      - extend the functionality of your pipeline
+      - Groovy/pipeline syntax
+      - Put a file "sayHello.groovy" inside jenkins-global-library/vars
+      ```
+      def call(String name = 'you') {
+        echo "Hello, ${name}"
+      }
+      ```
+      - To add it on the global level - Manage Jenkins - Configure System - Global Pipeline Libraries - Add
+        - Name
+        - Default version: master
+        - Load implicitly [X]
+        - Allow default version to be overriden [X]
+        - Retrieval method
+          - Modern SCM
+            - [X]GitHub
+              - Owner
+              - Scan credentials
+               - Repository: jenkins-global-library
+      - Modify Jenkinsfile to invoke it
+        ```
+        stage('Say Hello') {
+          agent any
+          steps {
+            sayHello 'Lucian Maly'
+          }
+        }
+        ```
+      - We can add it per specific project as well (!)
+      - Scripted pipeline is more flexible
+        ```
+        call library
+          script {
+            def myLib = new linuxacademy.git.gitStuff();
+            echo "My Commit: ${myLib.GitCommit("${env.WORKSPACE}/.git")}"
+          }
+        ```
+    - Usages of the [Shared Libraries](https://jenkins.io/doc/book/pipeline/shared-libraries/)
+    - Interaction with Folders and Repository scanning
+    - Security and Groovy sandbox
+
 ## CD-as-Code Best Practices
 
 - [Distributed builds architecture](https://wiki.jenkins.io/display/JENKINS/Distributed+builds)
