@@ -2,6 +2,12 @@
 
 Useful resources for anyone wanting to become a Jenkins Certified Engineer.
 
+## Establishing a Jenkins instance for exam preparation
+
+```
+docker-compose up -d
+```
+
 ## Useful links
 
 - [Study Guide 2018](https://www.cloudbees.com/sites/default/files/cje-study-guide-2018.pdf)
