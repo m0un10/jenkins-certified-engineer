@@ -6,6 +6,7 @@ Useful resources for anyone wanting to become a Jenkins Certified Engineer.
 
 ```
 docker-compose up -d
+open http://$(docker-compose port jenkins 8080)
 ```
 
 ## Useful links
